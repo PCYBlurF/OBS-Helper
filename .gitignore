@@ -1,0 +1,33 @@
+# --- Node / frontend ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+npm-debug.log*
+
+# --- Rust / Tauri ---
+/src-tauri/target/
+target/
+**/*.rs.bk
+*.pdb
+
+# --- Tauri bundle outputs ---
+src-tauri/target/release/bundle/
+*.exe
+*.msi
+*.nsis.zip
+
+# --- Legacy reference only (old Python prototype) ---
+/legacy-python/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# --- Python leftovers (in case anything remains) ---
+__pycache__/
+*.pyc
