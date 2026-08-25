@@ -182,7 +182,9 @@ pub struct ProxyState {
 
 fn open_settings_key() -> Result<RegKey, String> {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    hkcu.open_subkey(INTERNET_SETTINGS_KEY)
+    // Internet Settings must be opened read+write; winreg's `open_subkey`
+    // defaults to KEY_READ only, which would fail writes with access denied.
+    hkcu.open_subkey_with_flags(INTERNET_SETTINGS_KEY, KEY_READ | KEY_WRITE)
         .map_err(|e| format!("打开系统代理注册表失败: {e}"))
 }
 
