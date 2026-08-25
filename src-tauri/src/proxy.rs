@@ -86,6 +86,10 @@ pub struct Capturer {
     /// Per client-connection last request target (host, path) so the response
     /// handler can decide whether a body is worth scanning.
     last_target: Arc<Mutex<HashMap<SocketAddr, (String, String)>>>,
+    /// Once we've seen an authoritative `room/create` response, ignore later
+    /// `live_log` captures — those can echo a stale push URL from an earlier
+    /// session and would otherwise overwrite the fresh one OBS should use.
+    authoritative: Arc<Mutex<bool>>,
 }
 
 impl Capturer {
@@ -95,6 +99,7 @@ impl Capturer {
             seen: Arc::new(Mutex::new(HashMap::new())),
             last,
             last_target: Arc::new(Mutex::new(HashMap::new())),
+            authoritative: Arc::new(Mutex::new(false)),
         }
     }
 
@@ -102,7 +107,13 @@ impl Capturer {
         let _ = self.app.emit("log", msg.into());
     }
 
-    fn emit_capture(&self, server: String, stream_key: String, push_url: String, source: &str) {
+    fn emit_capture(&self, server: String, stream_key: String, push_url: String, source: &str, authoritative: bool) {
+        // `live_log` captures (non-authoritative) must not overwrite a fresh
+        // `room/create` URL with a possibly stale one from an earlier session.
+        if !authoritative && *self.authoritative.lock().unwrap() {
+            self.log(format!("忽略 {source}（已有 room/create 权威地址）"));
+            return;
+        }
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
@@ -115,6 +126,9 @@ impl Capturer {
                 }
             }
             seen.insert(push_url.clone(), now);
+        }
+        if authoritative {
+            *self.authoritative.lock().unwrap() = true;
         }
         let cap = Capture {
             server,
@@ -172,7 +186,7 @@ impl HttpHandler for Capturer {
         let text = String::from_utf8_lossy(&bytes).to_string();
         if let Some(url) = find_rtmp(&text) {
             if let Some((server, key)) = split_push_url(&url) {
-                self.emit_capture(server, key, url.clone(), "live_log 请求");
+                self.emit_capture(server, key, url.clone(), "live_log 请求", false);
             }
         }
 
@@ -216,8 +230,9 @@ impl HttpHandler for Capturer {
         let text = String::from_utf8_lossy(&bytes).to_string();
         if let Some(url) = find_rtmp(&text) {
             if let Some((server, key)) = split_push_url(&url) {
-                let source = if path.contains("room") { "room/create 响应" } else { "live_log 响应" };
-                self.emit_capture(server, key, url.clone(), source);
+                let authoritative = path.contains("room");
+                let source = if authoritative { "room/create 响应" } else { "live_log 响应" };
+                self.emit_capture(server, key, url.clone(), source, authoritative);
             }
         }
 
@@ -263,25 +278,27 @@ pub fn find_rtmp(text: &str) -> Option<String> {
 /// Score candidates: prefer paths containing `third`, then hosts containing
 /// `push`, then `douyincdn`, otherwise the first found.
 fn pick_best(cands: &[String]) -> Option<String> {
-    if cands.is_empty() {
-        return None;
+    let mut best: Option<&String> = None;
+    let mut best_score = -1i32;
+    for c in cands {
+        let mut s = 0;
+        if c.contains("third") {
+            s += 8;
+        }
+        if c.contains("push") {
+            s += 4;
+        }
+        if c.contains("douyincdn") {
+            s += 2;
+        }
+        // Strictly-greater keeps the FIRST candidate on ties, matching the old
+        // working logic instead of `max_by_key`'s last-tie-wins behaviour.
+        if best.is_none() || s > best_score {
+            best = Some(c);
+            best_score = s;
+        }
     }
-    cands
-        .iter()
-        .max_by_key(|c| {
-            let mut s = 0;
-            if c.contains("third") {
-                s += 8;
-            }
-            if c.contains("push") {
-                s += 4;
-            }
-            if c.contains("douyincdn") {
-                s += 2;
-            }
-            s
-        })
-        .cloned()
+    best.map(|s| s.to_string())
 }
 
 /// Split an RTMP push URL into `(server, stream_key)`.
@@ -348,5 +365,17 @@ mod tests {
         ];
         let best = pick_best(&c).unwrap();
         assert!(best.contains("third"));
+    }
+
+    #[test]
+    fn picks_first_when_tied() {
+        // Two equal-scoring `/third` candidates: must keep the FIRST, not the
+        // last (the last one can be stale). Mirrors the old working logic.
+        let c = vec![
+            "rtmp://push-h/thirdgame/stream-FRESH?sign=a".to_string(),
+            "rtmp://push-h/thirdgame/stream-STALE?sign=b".to_string(),
+        ];
+        let best = pick_best(&c).unwrap();
+        assert_eq!(best, "rtmp://push-h/thirdgame/stream-FRESH?sign=a");
     }
 }
