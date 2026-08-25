@@ -24,6 +24,7 @@ import socket
 import sys
 import threading
 import time
+import webbrowser
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter import scrolledtext
@@ -38,6 +39,57 @@ if APP_DIR not in sys.path:
 
 import proxy_utils  # noqa: E402
 from capturer import CaptureAddon  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# 项目信息 / 开源声明
+# ---------------------------------------------------------------------------
+PROJECT_NAME = "OBS权限助手"
+PROJECT_URL = "https://github.com/PCYBlurF/OBS-Helper"
+
+
+def show_open_source_notice(parent):
+    """启动时展示开源声明弹窗；确认后才进入主界面。"""
+    top = tk.Toplevel(parent)
+    top.title("开源声明")
+    top.configure(bg="white")
+    top.resizable(False, False)
+    top.transient(parent)
+    top.grab_set()
+
+    top.update_idletasks()
+    w, h = 500, 300
+    x = (top.winfo_screenwidth() - w) // 2
+    y = (top.winfo_screenheight() - h) // 2
+    top.geometry(f"{w}x{h}+{x}+{y}")
+
+    tk.Label(top, text="开源声明", font=("Microsoft YaHei", 14, "bold"),
+             bg="white").pack(pady=(18, 8))
+
+    body = (
+        "欢迎使用 " + PROJECT_NAME + "（开源项目）\n\n"
+        "本项目为开源软件，源代码已在 GitHub 公开。\n"
+        "请遵循开源许可证使用，仅限个人学习与合法用途，\n"
+        "禁止用于商业盈利或闭源分发。\n\n"
+        "项目主页："
+    )
+    tk.Label(top, text=body, justify="center", bg="white",
+             font=("Microsoft YaHei", 10)).pack(padx=26, pady=4)
+
+    tk.Button(top, text=PROJECT_URL, fg="#1a6bdd", bg="white", bd=0,
+              activebackground="white", activeforeground="#1a6bdd",
+              cursor="hand2", font=("Microsoft YaHei", 10, "underline"),
+              command=lambda: webbrowser.open(PROJECT_URL)).pack(pady=2)
+
+    btns = tk.Frame(top, bg="white")
+    btns.pack(pady=16)
+
+    tk.Button(btns, text="打开 GitHub 项目页", width=18,
+              command=lambda: webbrowser.open(PROJECT_URL)).pack(side="left", padx=6)
+    tk.Button(btns, text="我知道了，继续", width=18,
+              command=top.destroy).pack(side="left", padx=6)
+
+    top.wait_window()
 
 
 # ---------------------------------------------------------------------------
@@ -399,7 +451,10 @@ class App:
 
 def main():
     root = tk.Tk()
+    root.withdraw()                # 先隐藏主窗口
+    show_open_source_notice(root)  # 弹开源声明，确认后继续
     app = App(root)
+    root.deiconify()               # 显示主窗口
     root.protocol("WM_DELETE_WINDOW", app.on_close)
     root.mainloop()
 
