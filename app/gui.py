@@ -56,15 +56,7 @@ def show_open_source_notice(parent):
     top.resizable(False, False)
     # 注意：不能使用 top.transient(parent)。否则主窗口 withdraw()（隐藏）时，
     # transient 的弹窗也跟着隐藏，导致界面看起来「启动了却没有窗口」。
-    top.grab_set()
-
-    top.update_idletasks()
     w, h = 500, 300
-    x = (top.winfo_screenwidth() - w) // 2
-    y = (top.winfo_screenheight() - h) // 2
-    top.geometry(f"{w}x{h}+{x}+{y}")
-    top.lift()          # 置顶
-    top.focus_force()   # 强制聚焦，确保弹窗在最前面
 
     tk.Label(top, text="开源声明", font=("Microsoft YaHei", 14, "bold"),
              bg="white").pack(pady=(18, 8))
@@ -91,6 +83,18 @@ def show_open_source_notice(parent):
               command=lambda: webbrowser.open(PROJECT_URL)).pack(side="left", padx=6)
     tk.Button(btns, text="我知道了，继续", width=18,
               command=top.destroy).pack(side="left", padx=6)
+
+    # 先让窗口映射到屏幕（此时屏幕尺寸才可信），再居中；最后 grab/置顶/聚焦
+    top.update_idletasks()
+    top.update()
+    sw, sh = _screen_size() or (top.winfo_screenwidth(), top.winfo_screenheight())
+    x = max(0, (sw - w) // 2)
+    y = max(0, (sh - h) // 2)
+    top.geometry(f"{w}x{h}+{x}+{y}")
+    top.update()          # 让新位置/尺寸真正生效（Windows 上需再刷新一次）
+    top.grab_set()
+    top.lift()
+    top.focus_force()
 
     top.wait_window()
 
@@ -450,6 +454,19 @@ class App:
             except Exception:
                 pass
         self.root.destroy()
+
+
+def _screen_size():
+    """返回 (宽, 高) 物理像素。优先用系统 API——Tk 的 winfo_screenwidth 在窗口初始化期不稳定。"""
+    try:
+        import ctypes
+        u = ctypes.windll.user32
+        w, h = u.GetSystemMetrics(0), u.GetSystemMetrics(1)
+        if w > 0 and h > 0:
+            return w, h
+    except Exception:
+        pass
+    return None
 
 
 def main():
