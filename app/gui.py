@@ -54,7 +54,8 @@ def show_open_source_notice(parent):
     top.title("开源声明")
     top.configure(bg="white")
     top.resizable(False, False)
-    top.transient(parent)
+    # 注意：不能使用 top.transient(parent)。否则主窗口 withdraw()（隐藏）时，
+    # transient 的弹窗也跟着隐藏，导致界面看起来「启动了却没有窗口」。
     top.grab_set()
 
     top.update_idletasks()
@@ -62,6 +63,8 @@ def show_open_source_notice(parent):
     x = (top.winfo_screenwidth() - w) // 2
     y = (top.winfo_screenheight() - h) // 2
     top.geometry(f"{w}x{h}+{x}+{y}")
+    top.lift()          # 置顶
+    top.focus_force()   # 强制聚焦，确保弹窗在最前面
 
     tk.Label(top, text="开源声明", font=("Microsoft YaHei", 14, "bold"),
              bg="white").pack(pady=(18, 8))
