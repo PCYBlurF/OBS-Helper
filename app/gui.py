@@ -68,9 +68,9 @@ def show_open_source_notice(parent):
 
     body = (
         "欢迎使用 " + PROJECT_NAME + "（开源项目）\n\n"
-        "本项目为开源软件，源代码已在 GitHub 公开。\n"
-        "请遵循开源许可证使用，仅限个人学习与合法用途，\n"
-        "禁止用于商业盈利或闭源分发。\n\n"
+        "本项目遵循 GNU GPL v3 开源许可证发布，源码已在 GitHub 公开。\n"
+        "你可自由使用、修改与分发，但任何分发（含修改版）\n"
+        "都必须保留版权声明，并以 GPL v3 开源。\n\n"
         "项目主页："
     )
     tk.Label(top, text=body, justify="center", bg="white",
