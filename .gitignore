@@ -1,4 +1,18 @@
-# --- Node / frontend ---
+# --- Python app (work in progress / runtime) ---
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# --- mitmproxy runtime artifacts (generated at run time) ---
+.mitmproxy/
+mitmproxy_conf/
+
+# --- Archived rewrite (React+Tauri v2), kept only as reference; not tracked ---
+/_archive/
+/src-tauri/
+
+# --- Node / frontend build leftovers (archived Tauri project) ---
 node_modules/
 dist/
 dist-ssr/
@@ -6,20 +20,14 @@ dist-ssr/
 .vite/
 npm-debug.log*
 
-# --- Rust / Tauri ---
-/src-tauri/target/
+# --- Rust / Tauri build outputs (archived) ---
 target/
+/src-tauri/target/
 **/*.rs.bk
 *.pdb
-
-# --- Tauri bundle outputs ---
-src-tauri/target/release/bundle/
 *.exe
 *.msi
 *.nsis.zip
-
-# --- Legacy reference only (old Python prototype) ---
-/legacy-python/
 
 # --- OS / editor ---
 .DS_Store
@@ -27,7 +35,3 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-
-# --- Python leftovers (in case anything remains) ---
-__pycache__/
-*.pyc
